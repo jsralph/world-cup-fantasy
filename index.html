@@ -269,12 +269,12 @@
     </section>
 
     <section>
-      <div class="section-label">⚽ Last 3 Results</div>
+      <div class="section-label">⚽ Last 5 Results</div>
       <div class="match-grid" id="recent-matches"></div>
     </section>
 
     <section>
-      <div class="section-label">📅 Next 3 Fixtures</div>
+      <div class="section-label">📅 Next 5 Fixtures</div>
       <div class="match-grid" id="upcoming-matches"></div>
     </section>
 
@@ -354,28 +354,74 @@ async function loadData() {
   document.getElementById("content").style.display = "none";
   document.getElementById("status").innerHTML = '<div class="spinner"></div>Loading match data…';
 
-  const urls = [
-    "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json",
-    "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.knockout.json"
-  ];
+  const API_KEY = "a0cffb2e8d36b1d174035bcfe927cf04";
+  const API_BASE = "https://v3.football.api-sports.io";
+  const WC_LEAGUE = 1;      // FIFA World Cup
+  const WC_SEASON = 2026;
 
-  let allMatches = [];
-  for (const url of urls) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const data = await res.json();
-      const matches = data.matches || data;
-      if (Array.isArray(matches)) allMatches.push(...matches);
-    } catch(e) {}
-  }
-
-  if (!allMatches.length) {
-    document.getElementById("status").innerHTML = '⚠️ Could not load match data. Please try refreshing.';
+  if (window.location.protocol === 'file:') {
+    document.getElementById("status").innerHTML =
+      `⚠️ Open this via GitHub Pages, not as a local file.`;
     return;
   }
 
-  allMatches.sort((a,b) => new Date(a.date) - new Date(b.date));
+  async function apiFetch(path) {
+    const res = await fetch(API_BASE + path, {
+      headers: { "x-apisports-key": API_KEY }
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  // Convert API-Football fixture to our internal match format
+  // API status: NS=not started, 1H/2H/HT=live, FT/AET/PEN=finished
+  function convertFixture(f) {
+    const home = f.teams.home.name;
+    const away = f.teams.away.name;
+    const status = f.fixture.status.short;
+    const finished = ["FT","AET","PEN"].includes(status);
+    const live = ["1H","2H","HT","ET","BT","P","INT"].includes(status);
+    const date = f.fixture.date ? f.fixture.date.split("T")[0] : null;
+    const time = f.fixture.date ? f.fixture.date.split("T")[1]?.slice(0,5) : null;
+    // Round label
+    const round = f.league.round || "";
+    return {
+      date, time,
+      team1: home,
+      team2: away,
+      round,
+      status,
+      live,
+      elapsed: f.fixture.status.elapsed,
+      score: finished || live ? {
+        ft: [f.goals.home ?? 0, f.goals.away ?? 0]
+      } : null,
+      // for display only — goals during live
+      liveScore: live ? [f.goals.home ?? 0, f.goals.away ?? 0] : null,
+    };
+  }
+
+  let allMatches = [];
+  try {
+    const data = await apiFetch(`/fixtures?league=${WC_LEAGUE}&season=${WC_SEASON}`);
+    if (!data.response?.length) throw new Error("No fixtures");
+    allMatches = data.response.map(convertFixture);
+  } catch(e) {
+    document.getElementById("status").innerHTML =
+      `⚠️ Could not load match data (${e.message}).<br><br>
+       <button onclick="loadData()" style="background:var(--pitch);border:1px solid var(--gold);color:var(--gold);padding:8px 18px;border-radius:4px;cursor:pointer;font-size:0.85rem">↻ Try Again</button>`;
+    return;
+  }
+
+  if (!allMatches.length) {
+    document.getElementById("status").innerHTML = "⚠️ No match data returned.";
+    return;
+  }
+
+  function matchDateTime(m) {
+    return new Date((m.date || '1970-01-01') + 'T' + (m.time || '00:00') + ':00');
+  }
+  allMatches.sort((a, b) => matchDateTime(a) - matchDateTime(b));
 
   // ── Per-team stats (no double counting) ──
   // Key: canonical team name
@@ -519,10 +565,10 @@ async function loadData() {
   });
 
   // ── Render matches ──
-  const played = allMatches.filter(m => m.score?.ft);
-  const upcoming = allMatches.filter(m => !m.score?.ft);
-  const recent3 = played.slice(-3).reverse();
-  const next3 = upcoming.slice(0, 3);
+  const played = allMatches.filter(m => m.score?.ft && !m.live);
+  const upcoming = allMatches.filter(m => !m.score?.ft || m.live);
+  const recent3 = played.slice(-5).reverse();
+  const next3 = upcoming.slice(0, 5);
 
   function renderMatch(m, isUpcoming) {
     const t1 = resolveTeam(m.team1);
@@ -534,9 +580,15 @@ async function loadData() {
       ? `<span class="match-type-badge badge-ko">${m.round}</span>`
       : `<span class="match-type-badge badge-group">${m.group || m.round}</span>`;
     const dateStr = m.date ? new Date(m.date).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'}) : '';
-    const scoreHtml = isUpcoming
-      ? `<div class="match-score upcoming">vs</div>`
-      : `<div class="match-score">${m.score.ft[0]} – ${m.score.ft[1]}</div>`;
+    let scoreHtml;
+    if (m.live) {
+      scoreHtml = `<div class="match-score" style="color:var(--red)">${m.liveScore[0]} – ${m.liveScore[1]}<div style="font-size:0.55rem;letter-spacing:0.08em;color:var(--red);animation:pulse-name 1s ease-in-out infinite">${m.elapsed ? m.elapsed+"'" : 'LIVE'}</div></div>`;
+    } else if (isUpcoming) {
+      const kickoff = m.time ? m.time.slice(0,5) : '';
+      scoreHtml = `<div class="match-score upcoming">${kickoff || 'vs'}</div>`;
+    } else {
+      scoreHtml = `<div class="match-score">${m.score.ft[0]} – ${m.score.ft[1]}</div>`;
+    }
     return `
       <div class="match-card">
         <div class="match-meta"><span>${dateStr}</span><span>${typeBadge}</span></div>
@@ -585,7 +637,7 @@ async function loadData() {
   });
 
   document.getElementById("last-updated").textContent =
-    "Updated " + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    "Live data via API-Football · Updated " + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
   document.getElementById("status").style.display = "none";
   document.getElementById("content").style.display = "block";
 }
