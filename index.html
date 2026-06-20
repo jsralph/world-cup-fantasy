@@ -131,6 +131,18 @@
   .team-tag.active { border-color: var(--green); color: var(--green); }
   .team-tag.eliminated { opacity: 0.45; text-decoration: line-through; }
 
+  /* bonus rows */
+  .bonus-row td { background: rgba(78,201,123,0.07) !important; }
+  .bonus-pts-pos { color: var(--green); font-size: 0.8rem; }
+  .bonus-badge {
+    font-size: 0.72rem;
+    color: var(--green);
+    background: rgba(78,201,123,0.10);
+    border: 1px solid rgba(78,201,123,0.25);
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-left: 8px;
+  }
   /* bonus penalty rows */
   .penalty-row td { background: var(--penalty-bg) !important; }
   .penalty-badge {
@@ -224,7 +236,7 @@
 <header>
   <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
   <div class="header-title">World Cup 2026</div>
-  <div class="header-sub">Fantasy League — 8 Players · 6 Teams Each</div>
+  <div class="header-sub">and with the first pick <span id="leader-name">…</span> selects</div>
   <div class="last-updated" id="last-updated"></div>
 </header>
 
@@ -261,6 +273,23 @@
     <section>
       <div class="section-label">📅 Next 3 Fixtures</div>
       <div class="match-grid" id="upcoming-matches"></div>
+    </section>
+
+    <section>
+      <div class="section-label">🌍 All 48 Teams — Ranked by Points</div>
+      <table class="league-table" id="teams-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Team</th>
+            <th>Owner</th>
+            <th class="num">GP</th>
+            <th class="num">GD</th>
+            <th class="num">Pts</th>
+          </tr>
+        </thead>
+        <tbody id="teams-body"></tbody>
+      </table>
     </section>
   </div>
 </div>
@@ -432,15 +461,36 @@ async function loadData() {
       return (a.gf - a.ga) - (b.gf - b.ga);
     });
 
-  const bonusPenalties = { 0: -5, 1: -3, 2: -1 };
-  const bonusDeductions = {}; // player -> penalty pts
-  const worstTeams = []; // [{rank, team, player, pts, gd}]
+  // Bonus points for the 3 worst teams (+5/+3/+1), ties split that slot's value equally
+  // e.g. two teams tied for worst: each gets 5/2 = 2.5; two tied for 2nd worst: each gets 3/2 = 1.5
+  const bonusValues = [5, 3, 1];
+  const bonusDeductions = {};
+  const worstTeams = [];
 
-  for (let i = 0; i < Math.min(3, teamList.length); i++) {
-    const [team, ts] = teamList[i];
-    const pen = bonusPenalties[i];
-    bonusDeductions[ts.player] = (bonusDeductions[ts.player] || 0) + pen;
-    worstTeams.push({ rank: i+1, team, player: ts.player, teamPts: ts.pts, gd: ts.gf - ts.ga, penalty: pen });
+  // Assign a rank slot to each of the bottom teams, then detect ties
+  // A tie means multiple teams share the same slot's value — split only that slot
+  let slotIdx = 0;
+  while (slotIdx < Math.min(3, teamList.length)) {
+    const [, ts0] = teamList[slotIdx];
+    // Count how many consecutive teams are tied with this one
+    let tieEnd = slotIdx + 1;
+    while (tieEnd < teamList.length) {
+      const [, tsN] = teamList[tieEnd];
+      if (tsN.pts !== ts0.pts || (tsN.gf - tsN.ga) !== (ts0.gf - ts0.ga)) break;
+      tieEnd++;
+    }
+    // Teams in slots slotIdx..tieEnd-1 are all tied
+    // Only award bonus for slots that fall within our top 3 worst
+    const tiedInRange = teamList.slice(slotIdx, Math.min(tieEnd, 3));
+    const tiedTotal = teamList.slice(slotIdx, tieEnd); // all tied teams, even beyond slot 2
+    // Each team in the tie group (even those beyond slot 2) shares the single slot's bonus
+    const slotBonus = bonusValues[slotIdx] || 0;
+    const splitBonus = tiedTotal.length > 1 ? Math.round((slotBonus / tiedTotal.length) * 100) / 100 : slotBonus;
+    for (const [team, ts] of tiedInRange) {
+      bonusDeductions[ts.player] = (bonusDeductions[ts.player] || 0) + splitBonus;
+      worstTeams.push({ rank: slotIdx + 1, team, player: ts.player, teamPts: ts.pts, gd: ts.gf - ts.ga, bonus: splitBonus });
+    }
+    slotIdx = tieEnd; // jump past all tied teams
   }
 
   // ── Final standings ──
@@ -452,6 +502,12 @@ async function loadData() {
     if (b.pts !== a.pts) return b.pts - a.pts;
     return b.gd - a.gd;
   });
+
+  // ── Update header with leader ──
+  if (standings.length > 0) {
+    const leaderEl = document.getElementById('leader-name');
+    if (leaderEl) leaderEl.textContent = standings[0].player;
+  }
 
   // ── Active teams (still in tournament) ──
   // A team is eliminated if they lost in knockout or didn't advance (simplified: mark all who have played knockout and lost)
@@ -469,7 +525,7 @@ async function loadData() {
 
   standings.forEach((row, i) => {
     const tr = document.createElement("tr");
-    if (row.bonus < 0) tr.classList.add("penalty-row");
+    if (row.bonus > 0) tr.classList.add("bonus-row");
     const isTopThree = i < 3;
     const posCell = isTopThree ? `<td class="pos-medal">${MEDALS[i]}</td>` : `<td class="pos">${i+1}</td>`;
 
@@ -481,14 +537,15 @@ async function loadData() {
       return `<span class="${cls}">${t}</span>`;
     }).join("");
 
-    const bonusDisplay = row.bonus < 0
-      ? `<span class="bonus-pts">${row.bonus}</span>`
+    const bonusDisplay = row.bonus > 0
+      ? `<span class="bonus-pts-pos">+${row.bonus}</span>`
+      : row.bonus < 0 ? `<span class="bonus-pts">${row.bonus}</span>`
       : `<span style="color:var(--muted)">—</span>`;
 
     const totalColor = row.total > 0 ? '' : 'style="color:var(--red)"';
 
     const worstFor = worstTeams.filter(w => w.player === row.player);
-    const penBadge = worstFor.map(w => `<span class="penalty-badge">☠ ${w.team}</span>`).join("");
+    const penBadge = worstFor.map(w => `<span class="bonus-badge">⭐ ${w.team} (+${w.bonus})</span>`).join("");
 
     tr.innerHTML = `
       ${posCell}
@@ -507,6 +564,49 @@ async function loadData() {
       <td class="pts" ${totalColor}>${row.total}</td>
     `;
     tbody.appendChild(tr);
+  });
+
+  // ── Render teams table ──
+  const allTeamsSorted = Object.entries(teamStats)
+    .map(([team, ts]) => ({ team, player: ts.player, gp: ts.gf + ts.ga > 0 || ts.pts > 0 ? null : 0, pts: ts.pts, gf: ts.gf, ga: ts.ga }))
+    .sort((a, b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      return (b.gf - b.ga) - (a.gf - a.ga);
+    });
+
+  // Count games played per team
+  const teamGP = {};
+  for (const match of allMatches) {
+    if (!match.score?.ft) continue;
+    const t1 = canonicalTeam(match.team1);
+    const t2 = canonicalTeam(match.team2);
+    teamGP[t1] = (teamGP[t1] || 0) + 1;
+    teamGP[t2] = (teamGP[t2] || 0) + 1;
+    for (const [canon, alts] of Object.entries(ALIASES)) {
+      if (alts.map(a=>a.toLowerCase()).includes(match.team1.toLowerCase())) teamGP[canon] = (teamGP[canon]||0)+1;
+      if (alts.map(a=>a.toLowerCase()).includes(match.team2.toLowerCase())) teamGP[canon] = (teamGP[canon]||0)+1;
+    }
+  }
+
+  const teamsTbody = document.getElementById("teams-body");
+  teamsTbody.innerHTML = "";
+  allTeamsSorted.forEach((t, idx) => {
+    const tr = document.createElement("tr");
+    const gp = teamGP[t.team] || 0;
+    const gd = t.gf - t.ga;
+    const gdStr = gd > 0 ? '+' + gd : String(gd);
+    const gdClass = gd > 0 ? 'pts-positive' : gd < 0 ? 'pts-negative' : '';
+    const worstEntry = worstTeams.find(w => w.team === t.team);
+    const bonusBadge = worstEntry ? ` <span class="bonus-badge">⭐ +${worstEntry.bonus}</span>` : '';
+    tr.innerHTML = `
+      <td class="pos">${idx+1}</td>
+      <td class="player-name">${t.team}${bonusBadge}</td>
+      <td style="color:var(--muted);font-size:0.82rem">${t.player}</td>
+      <td class="num">${gp}</td>
+      <td class="num ${gdClass}">${gp > 0 ? gdStr : '—'}</td>
+      <td class="pts">${t.pts}</td>
+    `;
+    teamsTbody.appendChild(tr);
   });
 
   // ── Render matches ──
