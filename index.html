@@ -32,27 +32,73 @@
   }
 
   header {
-    background: var(--pitch);
+    background: linear-gradient(160deg, #0a3018 0%, #0B3D1E 50%, #082810 100%);
     border-bottom: 2px solid var(--gold);
-    padding: 22px 24px 18px;
+    padding: 28px 24px 22px;
     text-align: center;
     position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% -20%, rgba(201,168,76,0.12) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .header-inner { position: relative; z-index: 1; }
+  .header-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 6px;
   }
   .header-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(2rem, 6vw, 3.4rem);
-    letter-spacing: 0.08em;
+    font-size: clamp(2.4rem, 7vw, 4.2rem);
+    letter-spacing: 0.1em;
     color: var(--gold);
     line-height: 1;
+    text-shadow: 0 2px 24px rgba(201,168,76,0.3);
+  }
+  .header-divider {
+    width: 48px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 10px auto;
   }
   .header-sub {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-top: 6px;
-    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+    color: rgba(232,237,233,0.5);
+    letter-spacing: 0.12em;
     text-transform: uppercase;
+    margin-bottom: 4px;
   }
-  .last-updated { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .header-draft {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.1rem, 3vw, 1.55rem);
+    letter-spacing: 0.06em;
+    color: var(--text);
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  .header-draft .draft-prefix { color: rgba(232,237,233,0.45); font-size: 0.75em; }
+  .header-draft .draft-name {
+    color: var(--gold);
+    text-shadow: 0 0 18px rgba(201,168,76,0.5);
+    animation: pulse-name 2.5s ease-in-out infinite;
+  }
+  .header-draft .draft-suffix { color: rgba(232,237,233,0.45); font-size: 0.75em; }
+  @keyframes pulse-name {
+    0%, 100% { text-shadow: 0 0 12px rgba(201,168,76,0.4); }
+    50% { text-shadow: 0 0 28px rgba(201,168,76,0.85); }
+  }
+  .header-trophy {
+    font-size: 1.6rem;
+    line-height: 1;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 0 8px rgba(201,168,76,0.4));
+  }
+  .last-updated { font-size: 0.68rem; color: var(--muted); margin-top: 8px; }
   .refresh-btn {
     position: absolute; top: 18px; right: 18px;
     background: transparent; border: 1px solid var(--border);
@@ -91,6 +137,11 @@
   .pos-medal { font-size: 1.1rem; width: 24px; }
 
   .player-name { font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
+  .player-name.leader {
+    color: #58C4F5;
+    text-shadow: 0 0 10px rgba(88,196,245,0.35);
+  }
+  .leader-row td { background: rgba(88,196,245,0.04) !important; }
 
   /* country point cells */
   .country-cell {
@@ -188,9 +239,17 @@
 
 <header>
   <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
-  <div class="header-title">World Cup 2026</div>
-  <div class="header-sub">and with the first pick <span id="leader-name">…</span> selects</div>
-  <div class="last-updated" id="last-updated"></div>
+  <div class="header-inner">
+    <div class="header-trophy">🏆</div>
+    <div class="header-eyebrow">FIFA World Cup 2026 · Fantasy Draft</div>
+    <div class="header-title">World Cup 2026</div>
+    <div class="header-divider"></div>
+    <div class="header-sub">The stakes are real. The glory is eternal.</div>
+    <div class="header-draft">
+      <span class="draft-prefix">and with the first pick&nbsp;</span><span class="draft-name" id="leader-name">…</span><span class="draft-suffix">&nbsp;selects…</span>
+    </div>
+    <div class="last-updated" id="last-updated"></div>
+  </div>
 </header>
 
 <div class="container">
@@ -425,6 +484,8 @@ async function loadData() {
       ? `<td class="pos-medal">${MEDALS[i]}</td>`
       : `<td class="pos">${i+1}</td>`;
 
+    if (i === 0) tr.classList.add('leader-row');
+
     const teams = PLAYERS[row.player];
     const countryCells = teams.map(t => {
       const ts = teamStats[t];
@@ -447,7 +508,7 @@ async function loadData() {
 
     tr.innerHTML = `
       ${posCell}
-      <td class="left"><span class="player-name">${row.player}</span></td>
+      <td class="left"><span class="player-name${i === 0 ? ' leader' : ''}">${row.player}</span></td>
       ${countryCells}
       <td>${bonusDisplay}</td>
       <td class="total-col">${row.total % 1 === 0 ? row.total : row.total.toFixed(1)}</td>
