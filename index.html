@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Cup 2026 — Fantasy League</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --gold: #C9A84C;
+    --gold-dim: #8A6B28;
+    --pitch: #0B3D1E;
+    --pitch-mid: #112E18;
+    --pitch-light: #1A4A28;
+    --surface: #0E1A12;
+    --surface2: #162210;
+    --border: rgba(201,168,76,0.18);
+    --text: #E8EDE9;
+    --muted: #7A9480;
+    --red: #E05050;
+    --green: #4EC97B;
+    --yellow: #F0C040;
+    --silver: #A0B0A8;
+    --bronze: #C08050;
+    --penalty-bg: rgba(224,80,80,0.13);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--pitch);
+    border-bottom: 2px solid var(--gold);
+    padding: 22px 24px 18px;
+    text-align: center;
+    position: relative;
+  }
+  .header-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .header-sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .last-updated {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .refresh-btn {
+    position: absolute;
+    top: 18px; right: 18px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--gold);
+    padding: 6px 13px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    transition: background 0.2s;
+  }
+  .refresh-btn:hover { background: rgba(201,168,76,0.1); }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+  section { margin-top: 32px; }
+
+  .section-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.1em;
+    color: var(--gold-dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+  }
+
+  /* ── League Table ── */
+  .league-table { width: 100%; border-collapse: collapse; }
+  .league-table th {
+    font-size: 0.67rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .league-table th.num { text-align: right; }
+  .league-table td {
+    padding: 11px 10px;
+    font-size: 0.88rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  .league-table td.num { text-align: right; color: var(--muted); }
+  .league-table td.pts { text-align: right; font-weight: 700; font-size: 1rem; }
+  .league-table tr:hover td { background: rgba(255,255,255,0.025); }
+
+  .pos { font-size: 0.8rem; color: var(--muted); width: 28px; }
+  .pos-medal { font-size: 1.1rem; width: 28px; }
+
+  .player-name { font-weight: 600; font-size: 0.95rem; }
+  .player-teams { font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .team-tag {
+    background: var(--pitch-light);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.68rem;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .team-tag.active { border-color: var(--green); color: var(--green); }
+  .team-tag.eliminated { opacity: 0.45; text-decoration: line-through; }
+
+  /* bonus penalty rows */
+  .penalty-row td { background: var(--penalty-bg) !important; }
+  .penalty-badge {
+    font-size: 0.72rem;
+    color: var(--red);
+    background: rgba(224,80,80,0.12);
+    border: 1px solid rgba(224,80,80,0.25);
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-left: 8px;
+  }
+  .bonus-pts { color: var(--red); font-size: 0.8rem; }
+
+  /* ── Recent / Upcoming ── */
+  .match-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 10px;
+  }
+  .match-card {
+    background: var(--pitch-mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 0.82rem;
+  }
+  .match-meta {
+    font-size: 0.67rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .match-teams {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .match-team { flex: 1; }
+  .match-team.right { text-align: right; }
+  .match-team-name { font-weight: 600; font-size: 0.88rem; }
+  .match-team-owner { font-size: 0.68rem; color: var(--muted); }
+  .match-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.05em;
+    color: var(--gold);
+    min-width: 56px;
+    text-align: center;
+  }
+  .match-score.upcoming { color: var(--muted); font-size: 1rem; }
+  .match-type-badge {
+    font-size: 0.64rem;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 4px;
+  }
+  .badge-ko { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid var(--border); }
+  .badge-group { background: rgba(26,74,40,0.5); color: var(--muted); border: 1px solid rgba(255,255,255,0.06); }
+
+  /* ── Loading / Error ── */
+  #status {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .pts-positive { color: var(--green); }
+  .pts-negative { color: var(--red); }
+
+  @media (max-width: 600px) {
+    .league-table th.hide-mobile, .league-table td.hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+  <div class="header-title">World Cup 2026</div>
+  <div class="header-sub">Fantasy League — 8 Players · 6 Teams Each</div>
+  <div class="last-updated" id="last-updated"></div>
+</header>
+
+<div class="container">
+  <div id="status"><div class="spinner"></div>Loading match data…</div>
+  <div id="content" style="display:none">
+    <section>
+      <div class="section-label">🏆 League Table</div>
+      <table class="league-table" id="league-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Player</th>
+            <th class="num hide-mobile">W</th>
+            <th class="num hide-mobile">D</th>
+            <th class="num hide-mobile">L</th>
+            <th class="num hide-mobile">GF</th>
+            <th class="num hide-mobile">GA</th>
+            <th class="num hide-mobile">GD</th>
+            <th class="num">Pts</th>
+            <th class="num">Bonus</th>
+            <th class="num">Total</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-label">⚽ Last 3 Results</div>
+      <div class="match-grid" id="recent-matches"></div>
+    </section>
+
+    <section>
+      <div class="section-label">📅 Next 3 Fixtures</div>
+      <div class="match-grid" id="upcoming-matches"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+// ── Player definitions ──
+const PLAYERS = {
+  Chris:  ["France", "USA", "Ecuador", "Norway", "Scotland", "Ghana"],
+  Edd:    ["England", "Mexico", "Australia", "Canada", "Tunisia", "Saudi Arabia"],
+  Phil:   ["Argentina", "Senegal", "Austria", "Sweden", "Paraguay", "Haiti"],
+  Emily:  ["Portugal", "Colombia", "Iran", "Ivory Coast", "Qatar", "Jordan"],
+  Amy:    ["Netherlands", "Belgium", "Turkey", "Czech Republic", "Iraq", "Curacao"],
+  Adam:   ["Brazil", "Croatia", "South Korea", "Algeria", "DR Congo", "Cape Verde"],
+  Ralph:  ["Morocco", "Germany", "Japan", "Egypt", "Uzbekistan", "Bosnia & Herzegovina"],
+  Packer: ["Spain", "Uruguay", "Switzerland", "Panama", "South Africa", "New Zealand"]
+};
+
+// Name aliases (API may use different spellings)
+const ALIASES = {
+  "Ivory Coast": ["Côte d'Ivoire", "Cote d'Ivoire", "Ivory Coast"],
+  "Bosnia & Herzegovina": ["Bosnia & Herzegovina", "Bosnia-Herzegovina", "Bosnia and Herzegovina"],
+  "DR Congo": ["DR Congo", "Congo DR", "Democratic Republic of Congo", "DRC"],
+  "Cape Verde": ["Cape Verde", "Cabo Verde"],
+  "South Korea": ["South Korea", "Korea Republic", "Korea DPR"],
+  "USA": ["USA", "United States", "United States of America"],
+  "Curacao": ["Curacao", "Curaçao"],
+};
+
+// Build reverse map: team name -> player
+function buildTeamMap() {
+  const map = {};
+  for (const [player, teams] of Object.entries(PLAYERS)) {
+    for (const team of teams) {
+      const canonical = team;
+      map[canonical.toLowerCase()] = player;
+      // also map aliases
+      for (const [canon, alts] of Object.entries(ALIASES)) {
+        if (canon === team) {
+          for (const alt of alts) map[alt.toLowerCase()] = player;
+        }
+      }
+    }
+  }
+  return map;
+}
+
+function findPlayer(teamName, teamMap) {
+  if (!teamName) return null;
+  return teamMap[teamName.toLowerCase()] || null;
+}
+
+function canonicalTeam(teamName) {
+  // Return the canonical name as used in PLAYERS
+  for (const [canon, alts] of Object.entries(ALIASES)) {
+    if (alts.map(a=>a.toLowerCase()).includes(teamName.toLowerCase())) return canon;
+  }
+  return teamName;
+}
+
+const KNOCKOUT_ROUNDS = ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Third place", "Final"];
+function isKnockout(round) {
+  return KNOCKOUT_ROUNDS.some(r => round && round.toLowerCase().includes(r.toLowerCase()));
+}
+
+const MEDALS = { 0: "🥇", 1: "🥈", 2: "🥉" };
+
+async function loadData() {
+  document.getElementById("status").style.display = "block";
+  document.getElementById("content").style.display = "none";
+  document.getElementById("status").innerHTML = '<div class="spinner"></div>Loading match data…';
+
+  // Fetch all rounds: group stage + knockout
+  const urls = [
+    "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json",
+    "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.knockout.json"
+  ];
+
+  let allMatches = [];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const matches = data.matches || data;
+      if (Array.isArray(matches)) allMatches.push(...matches);
+    } catch(e) {
+      // ignore missing knockout file early in tournament
+    }
+  }
+
+  if (allMatches.length === 0) {
+    document.getElementById("status").innerHTML = '⚠️ Could not load match data. Please try refreshing.';
+    return;
+  }
+
+  const teamMap = buildTeamMap();
+
+  // Sort matches by date
+  allMatches.sort((a, b) => new Date(a.date + 'T' + (a.time||'00:00').replace(/ UTC.*/,'')) - new Date(b.date + 'T' + (b.time||'00:00').replace(/ UTC.*/,'')));
+
+  // ── Build player stats ──
+  const stats = {};
+  for (const p of Object.keys(PLAYERS)) {
+    stats[p] = { w:0, d:0, l:0, gf:0, ga:0, pts:0 };
+  }
+
+  const now = new Date();
+
+  for (const match of allMatches) {
+    if (!match.score || !match.score.ft) continue;
+    const [g1, g2] = match.score.ft;
+    const p1 = findPlayer(match.team1, teamMap);
+    const p2 = findPlayer(match.team2, teamMap);
+    const ko = isKnockout(match.round);
+
+    // 90 mins only — draw includes AET etc for fantasy purposes
+    const result = g1 > g2 ? 'win1' : g1 < g2 ? 'win2' : 'draw';
+
+    if (p1) {
+      stats[p1].gf += g1;
+      stats[p1].ga += g2;
+      if (result === 'win1') { stats[p1].w++; stats[p1].pts += 3; }
+      else if (result === 'draw') { stats[p1].d++; stats[p1].pts += 1; }
+      else { stats[p1].l++; }
+    }
+    if (p2) {
+      stats[p2].gf += g2;
+      stats[p2].ga += g1;
+      if (result === 'win2') { stats[p2].w++; stats[p2].pts += 3; }
+      else if (result === 'draw') { stats[p2].d++; stats[p2].pts += 1; }
+      else { stats[p2].l++; }
+    }
+  }
+
+  // ── Bonus system (worst 3 teams) ──
+  // Calculate per-team stats
+  const teamStats = {};
+  for (const p of Object.keys(PLAYERS)) {
+    for (const team of PLAYERS[p]) {
+      teamStats[team] = { pts:0, gf:0, ga:0, player:p };
+    }
+  }
+
+  for (const match of allMatches) {
+    if (!match.score || !match.score.ft) continue;
+    const [g1, g2] = match.score.ft;
+    const t1 = canonicalTeam(match.team1);
+    const t2 = canonicalTeam(match.team2);
+    const r1 = g1 > g2 ? 3 : g1 === g2 ? 1 : 0;
+    const r2 = g2 > g1 ? 3 : g1 === g2 ? 1 : 0;
+    if (teamStats[t1]) { teamStats[t1].pts += r1; teamStats[t1].gf += g1; teamStats[t1].ga += g2; }
+    if (teamStats[t2]) { teamStats[t2].pts += r2; teamStats[t2].gf += g2; teamStats[t2].ga += g1; }
+    // also try alias lookup
+    for (const [canon, alts] of Object.entries(ALIASES)) {
+      if (alts.map(a=>a.toLowerCase()).includes(match.team1.toLowerCase()) && teamStats[canon]) {
+        teamStats[canon].pts += r1; teamStats[canon].gf += g1; teamStats[canon].ga += g2;
+      }
+      if (alts.map(a=>a.toLowerCase()).includes(match.team2.toLowerCase()) && teamStats[canon]) {
+        teamStats[canon].pts += r2; teamStats[canon].gf += g2; teamStats[canon].ga += g1;
+      }
+    }
+  }
+
+  // Sort teams worst first (fewest pts, then worst GD)
+  const teamList = Object.entries(teamStats)
+    .filter(([, ts]) => ts.pts + ts.gf + ts.ga > 0) // only teams that have played
+    .sort(([,a],[,b]) => {
+      if (a.pts !== b.pts) return a.pts - b.pts;
+      return (a.gf - a.ga) - (b.gf - b.ga);
+    });
+
+  const bonusPenalties = { 0: -5, 1: -3, 2: -1 };
+  const bonusDeductions = {}; // player -> penalty pts
+  const worstTeams = []; // [{rank, team, player, pts, gd}]
+
+  for (let i = 0; i < Math.min(3, teamList.length); i++) {
+    const [team, ts] = teamList[i];
+    const pen = bonusPenalties[i];
+    bonusDeductions[ts.player] = (bonusDeductions[ts.player] || 0) + pen;
+    worstTeams.push({ rank: i+1, team, player: ts.player, teamPts: ts.pts, gd: ts.gf - ts.ga, penalty: pen });
+  }
+
+  // ── Final standings ──
+  const standings = Object.entries(stats).map(([player, s]) => {
+    const bonus = bonusDeductions[player] || 0;
+    return { player, ...s, gd: s.gf - s.ga, bonus, total: s.pts + bonus };
+  }).sort((a, b) => {
+    if (b.total !== a.total) return b.total - a.total;
+    if (b.pts !== a.pts) return b.pts - a.pts;
+    return b.gd - a.gd;
+  });
+
+  // ── Active teams (still in tournament) ──
+  // A team is eliminated if they lost in knockout or didn't advance (simplified: mark all who have played knockout and lost)
+  const eliminatedTeams = new Set();
+  for (const match of allMatches) {
+    if (!isKnockout(match.round) || !match.score?.ft) continue;
+    const [g1, g2] = match.score.ft;
+    if (g1 > g2) eliminatedTeams.add(match.team2);
+    else if (g2 > g1) eliminatedTeams.add(match.team1);
+  }
+
+  // ── Render league table ──
+  const tbody = document.getElementById("table-body");
+  tbody.innerHTML = "";
+
+  standings.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    if (row.bonus < 0) tr.classList.add("penalty-row");
+    const isTopThree = i < 3;
+    const posCell = isTopThree ? `<td class="pos-medal">${MEDALS[i]}</td>` : `<td class="pos">${i+1}</td>`;
+
+    const teams = PLAYERS[row.player];
+    const teamTags = teams.map(t => {
+      const canonical = canonicalTeam(t);
+      const isElim = [...eliminatedTeams].some(e => e.toLowerCase() === t.toLowerCase() || e.toLowerCase() === canonical.toLowerCase());
+      const cls = isElim ? "team-tag eliminated" : "team-tag active";
+      return `<span class="${cls}">${t}</span>`;
+    }).join("");
+
+    const bonusDisplay = row.bonus < 0
+      ? `<span class="bonus-pts">${row.bonus}</span>`
+      : `<span style="color:var(--muted)">—</span>`;
+
+    const totalColor = row.total > 0 ? '' : 'style="color:var(--red)"';
+
+    const worstFor = worstTeams.filter(w => w.player === row.player);
+    const penBadge = worstFor.map(w => `<span class="penalty-badge">☠ ${w.team}</span>`).join("");
+
+    tr.innerHTML = `
+      ${posCell}
+      <td>
+        <div class="player-name">${row.player}${penBadge}</div>
+        <div class="player-teams">${teamTags}</div>
+      </td>
+      <td class="num hide-mobile">${row.w}</td>
+      <td class="num hide-mobile">${row.d}</td>
+      <td class="num hide-mobile">${row.l}</td>
+      <td class="num hide-mobile">${row.gf}</td>
+      <td class="num hide-mobile">${row.ga}</td>
+      <td class="num hide-mobile ${row.gd >= 0 ? 'pts-positive' : 'pts-negative'}">${row.gd > 0 ? '+' : ''}${row.gd}</td>
+      <td class="pts">${row.pts}</td>
+      <td class="num">${bonusDisplay}</td>
+      <td class="pts" ${totalColor}>${row.total}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // ── Render matches ──
+  const played = allMatches.filter(m => m.score?.ft);
+  const upcoming = allMatches.filter(m => !m.score?.ft);
+
+  const recent3 = played.slice(-3).reverse();
+  const next3 = upcoming.slice(0, 3);
+
+  function renderMatch(m, isUpcoming) {
+    const p1 = findPlayer(m.team1, teamMap);
+    const p2 = findPlayer(m.team2, teamMap);
+    const ko = isKnockout(m.round);
+    const typeBadge = ko
+      ? `<span class="match-type-badge badge-ko">${m.round}</span>`
+      : `<span class="match-type-badge badge-group">${m.group || m.round}</span>`;
+
+    const dateStr = m.date ? new Date(m.date).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'}) : '';
+
+    let scoreHtml;
+    if (isUpcoming) {
+      scoreHtml = `<div class="match-score upcoming">vs</div>`;
+    } else {
+      const [g1, g2] = m.score.ft;
+      scoreHtml = `<div class="match-score">${g1} – ${g2}</div>`;
+    }
+
+    return `
+      <div class="match-card">
+        <div class="match-meta">
+          <span>${dateStr}</span>
+          <span>${typeBadge}</span>
+        </div>
+        <div class="match-teams">
+          <div class="match-team">
+            <div class="match-team-name">${m.team1}</div>
+            <div class="match-team-owner">${p1 ? '👤 '+p1 : ''}</div>
+          </div>
+          ${scoreHtml}
+          <div class="match-team right">
+            <div class="match-team-name">${m.team2}</div>
+            <div class="match-team-owner">${p2 ? '👤 '+p2 : ''}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById("recent-matches").innerHTML =
+    recent3.length ? recent3.map(m => renderMatch(m, false)).join("") : '<p style="color:var(--muted);font-size:0.85rem">No results yet</p>';
+  document.getElementById("upcoming-matches").innerHTML =
+    next3.length ? next3.map(m => renderMatch(m, true)).join("") : '<p style="color:var(--muted);font-size:0.85rem">No upcoming fixtures</p>';
+
+  // ── Show ──
+  document.getElementById("last-updated").textContent =
+    "Updated " + new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+  document.getElementById("status").style.display = "none";
+  document.getElementById("content").style.display = "block";
+}
+
+loadData();
+</script>
+</body>
+</html>
