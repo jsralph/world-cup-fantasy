@@ -401,36 +401,38 @@ async function loadData() {
     }
   }
 
-  // ── Bonus: worst 3 teams by pts then GD, split that slot's value equally ──
+  // ── Bonus: worst 3 teams get +5/+3/+1. Ties all get that slot's value; next slots skipped.
+  // e.g. 2x joint 1st => both get 5, then next award is 1 (slot 2), not 3
+  // e.g. 1st + 2x joint 2nd => 5, 3 & 3 (no 3rd awarded)
   const bonusValues = [5, 3, 1];
-  const bonusDeductions = {}; // player -> bonus pts earned
+  const bonusDeductions = {};
   const worstTeams = [];
 
   const teamList = Object.entries(teamStats)
     .filter(([, ts]) => ts.gp > 0)
     .sort(([,a],[,b]) => a.pts !== b.pts ? a.pts - b.pts : (a.gf-a.ga) - (b.gf-b.ga));
 
-  let slot = 0;
-  while (slot < 3 && slot < teamList.length) {
-    const [, ts0] = teamList[slot];
-    // find end of tie group
-    let end = slot + 1;
+  let slot = 0;       // which bonus slot we're awarding (0=5pts, 1=3pts, 2=1pt)
+  let rank = 0;       // position in teamList
+  while (slot < 3 && rank < teamList.length) {
+    const [, ts0] = teamList[rank];
+    // collect all teams tied with this one
+    let end = rank + 1;
     while (end < teamList.length) {
       const [, tsN] = teamList[end];
       if (tsN.pts !== ts0.pts || (tsN.gf - tsN.ga) !== (ts0.gf - ts0.ga)) break;
       end++;
     }
-    // all teams slot..end-1 are tied; award only for slots within 0-2
-    const allTied = teamList.slice(slot, end);
-    const slotsAwarded = Math.min(end, 3) - slot; // how many bonus slots this tie group covers
-    const totalBonus = bonusValues.slice(slot, slot + slotsAwarded).reduce((s,v) => s+v, 0);
-    const splitBonus = Math.round((totalBonus / allTied.length) * 100) / 100;
-    for (const [team, ts] of allTied) {
+    const tiedTeams = teamList.slice(rank, end);
+    const bonusForSlot = bonusValues[slot]; // every tied team gets this full value
+    for (const [team] of tiedTeams) {
       const player = TEAM_TO_PLAYER[team];
-      if (player) bonusDeductions[player] = (bonusDeductions[player] || 0) + splitBonus;
-      worstTeams.push({ team, player, bonus: splitBonus });
+      if (player) bonusDeductions[player] = (bonusDeductions[player] || 0) + bonusForSlot;
+      worstTeams.push({ team, player, bonus: bonusForSlot });
     }
-    slot = end;
+    // skip as many slots as there were tied teams (they consumed those positions)
+    slot += tiedTeams.length;
+    rank = end;
   }
 
   // ── Player stats (summed from team stats) ──
