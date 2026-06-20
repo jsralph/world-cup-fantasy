@@ -402,13 +402,41 @@ async function loadData() {
   }
 
   let allMatches = [];
+  let debugInfo = "";
   try {
-    const data = await apiFetch(`/fixtures?league=${WC_LEAGUE}&season=${WC_SEASON}`);
-    if (!data.response?.length) throw new Error("No fixtures");
+    // API-Football uses league ID 1 for FIFA World Cup on v3.football.api-sports.io
+    // Try league 1 first, then fall back to searching by name
+    let data = await apiFetch(`/fixtures?league=${WC_LEAGUE}&season=${WC_SEASON}`);
+    debugInfo = `league=1: ${data.response?.length ?? 0} fixtures, errors: ${JSON.stringify(data.errors)}`;
+
+    if (!data.response?.length) {
+      // Try searching for the league to find the right ID
+      const leagueData = await apiFetch(`/leagues?season=${WC_SEASON}&type=Cup`);
+      const wcLeague = leagueData.response?.find(r =>
+        r.league.name.toLowerCase().includes("world cup") &&
+        !r.league.name.toLowerCase().includes("women") &&
+        !r.league.name.toLowerCase().includes("youth") &&
+        !r.league.name.toLowerCase().includes("quali")
+      );
+      debugInfo += ` | League search: ${wcLeague ? wcLeague.league.id + ' ' + wcLeague.league.name : 'not found'}`;
+
+      if (wcLeague) {
+        data = await apiFetch(`/fixtures?league=${wcLeague.league.id}&season=${WC_SEASON}`);
+        debugInfo += ` | fixtures with found ID: ${data.response?.length ?? 0}`;
+      }
+    }
+
+    if (!data.response?.length) {
+      throw new Error(`No fixtures found. Debug: ${debugInfo}`);
+    }
     allMatches = data.response.map(convertFixture);
   } catch(e) {
     document.getElementById("status").innerHTML =
-      `⚠️ Could not load match data (${e.message}).<br><br>
+      `⚠️ Could not load match data.<br><br>
+       <details style="margin:12px auto;max-width:500px;text-align:left;font-size:0.75rem;color:var(--muted)">
+         <summary style="cursor:pointer;color:var(--gold)">Show diagnostic info</summary>
+         <pre style="margin-top:8px;white-space:pre-wrap;word-break:break-all">${e.message}</pre>
+       </details>
        <button onclick="loadData()" style="background:var(--pitch);border:1px solid var(--gold);color:var(--gold);padding:8px 18px;border-radius:4px;cursor:pointer;font-size:0.85rem">↻ Try Again</button>`;
     return;
   }
