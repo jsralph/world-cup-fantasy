@@ -397,10 +397,19 @@ async function loadData() {
     return;
   }
 
+  // openfootball time field looks like "13:00 UTC-6" or "20:00 UTC-6"
+  // Strip everything after the first space to get just "HH:MM", then parse as UTC
+  // (we ignore the actual timezone offset — we just want consistent ordering by date+time)
   function matchDateTime(m) {
-    return new Date((m.date || '1970-01-01') + 'T' + (m.time || '00:00') + ':00');
+    const dateStr = m.date || '1970-01-01';
+    const rawTime = (m.time || '00:00').split(' ')[0]; // grab "HH:MM" before " UTC..."
+    return new Date(dateStr + 'T' + rawTime + ':00Z');
   }
   allMatches.sort((a, b) => matchDateTime(a) - matchDateTime(b));
+
+  // Split into played vs upcoming based purely on whether a score exists
+  // Then use NOW to determine "upcoming" — anything without a score and date <= today
+  const now = new Date();
 
   // ── Per-team stats (no double counting) ──
   // Key: canonical team name
@@ -545,6 +554,7 @@ async function loadData() {
 
   // ── Render matches ──
   const played = allMatches.filter(m => m.score?.ft);
+  // upcoming = no score yet, sorted ascending (already sorted above)
   const upcoming = allMatches.filter(m => !m.score?.ft);
   const recent3 = played.slice(-5).reverse();
   const next3 = upcoming.slice(0, 5);
