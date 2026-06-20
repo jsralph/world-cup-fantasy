@@ -354,95 +354,46 @@ async function loadData() {
   document.getElementById("content").style.display = "none";
   document.getElementById("status").innerHTML = '<div class="spinner"></div>Loading match data…';
 
-  const API_KEY = "a0cffb2e8d36b1d174035bcfe927cf04";
-  const API_BASE = "https://v3.football.api-sports.io";
-  const WC_LEAGUE = 1;      // FIFA World Cup
-  const WC_SEASON = 2026;
+  const MAIN_URL = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
+  const KNOCKOUT_URL = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.knockout.json";
 
   if (window.location.protocol === 'file:') {
     document.getElementById("status").innerHTML =
-      `⚠️ Open this via GitHub Pages, not as a local file.`;
+      `⚠️ This page needs to be opened via a web server — not as a local file.<br><br>
+       <span style="font-size:0.8rem;color:var(--muted)">Please upload it to GitHub Pages and open it from there.</span>`;
     return;
   }
 
-  async function apiFetch(path) {
-    const res = await fetch(API_BASE + path, {
-      headers: { "x-apisports-key": API_KEY }
-    });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
-  }
-
-  // Convert API-Football fixture to our internal match format
-  // API status: NS=not started, 1H/2H/HT=live, FT/AET/PEN=finished
-  function convertFixture(f) {
-    const home = f.teams.home.name;
-    const away = f.teams.away.name;
-    const status = f.fixture.status.short;
-    const finished = ["FT","AET","PEN"].includes(status);
-    const live = ["1H","2H","HT","ET","BT","P","INT"].includes(status);
-    const date = f.fixture.date ? f.fixture.date.split("T")[0] : null;
-    const time = f.fixture.date ? f.fixture.date.split("T")[1]?.slice(0,5) : null;
-    // Round label
-    const round = f.league.round || "";
-    return {
-      date, time,
-      team1: home,
-      team2: away,
-      round,
-      status,
-      live,
-      elapsed: f.fixture.status.elapsed,
-      score: finished || live ? {
-        ft: [f.goals.home ?? 0, f.goals.away ?? 0]
-      } : null,
-      // for display only — goals during live
-      liveScore: live ? [f.goals.home ?? 0, f.goals.away ?? 0] : null,
-    };
+  async function tryFetch(url) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const text = await res.text();
+      if (!text || text.trim().startsWith('404')) return null;
+      return JSON.parse(text);
+    } catch(e) {
+      return null;
+    }
   }
 
   let allMatches = [];
-  let debugInfo = "";
-  try {
-    // API-Football uses league ID 1 for FIFA World Cup on v3.football.api-sports.io
-    // Try league 1 first, then fall back to searching by name
-    let data = await apiFetch(`/fixtures?league=${WC_LEAGUE}&season=${WC_SEASON}`);
-    debugInfo = `league=1: ${data.response?.length ?? 0} fixtures, errors: ${JSON.stringify(data.errors)}`;
 
-    if (!data.response?.length) {
-      // Try searching for the league to find the right ID
-      const leagueData = await apiFetch(`/leagues?season=${WC_SEASON}&type=Cup`);
-      const wcLeague = leagueData.response?.find(r =>
-        r.league.name.toLowerCase().includes("world cup") &&
-        !r.league.name.toLowerCase().includes("women") &&
-        !r.league.name.toLowerCase().includes("youth") &&
-        !r.league.name.toLowerCase().includes("quali")
-      );
-      debugInfo += ` | League search: ${wcLeague ? wcLeague.league.id + ' ' + wcLeague.league.name : 'not found'}`;
+  const mainData = await tryFetch(MAIN_URL);
+  if (mainData) {
+    const matches = mainData.matches || mainData;
+    if (Array.isArray(matches)) allMatches.push(...matches);
+  }
 
-      if (wcLeague) {
-        data = await apiFetch(`/fixtures?league=${wcLeague.league.id}&season=${WC_SEASON}`);
-        debugInfo += ` | fixtures with found ID: ${data.response?.length ?? 0}`;
-      }
-    }
-
-    if (!data.response?.length) {
-      throw new Error(`No fixtures found. Debug: ${debugInfo}`);
-    }
-    allMatches = data.response.map(convertFixture);
-  } catch(e) {
-    document.getElementById("status").innerHTML =
-      `⚠️ Could not load match data.<br><br>
-       <details style="margin:12px auto;max-width:500px;text-align:left;font-size:0.75rem;color:var(--muted)">
-         <summary style="cursor:pointer;color:var(--gold)">Show diagnostic info</summary>
-         <pre style="margin-top:8px;white-space:pre-wrap;word-break:break-all">${e.message}</pre>
-       </details>
-       <button onclick="loadData()" style="background:var(--pitch);border:1px solid var(--gold);color:var(--gold);padding:8px 18px;border-radius:4px;cursor:pointer;font-size:0.85rem">↻ Try Again</button>`;
-    return;
+  const koData = await tryFetch(KNOCKOUT_URL);
+  if (koData) {
+    const matches = koData.matches || koData;
+    if (Array.isArray(matches)) allMatches.push(...matches);
   }
 
   if (!allMatches.length) {
-    document.getElementById("status").innerHTML = "⚠️ No match data returned.";
+    document.getElementById("status").innerHTML =
+      `⚠️ Could not load match data.<br><br>
+       <button onclick="loadData()" style="background:var(--pitch);border:1px solid var(--gold);color:var(--gold);padding:8px 18px;border-radius:4px;cursor:pointer;font-size:0.85rem">↻ Try Again</button>`;
     return;
   }
 
@@ -593,8 +544,8 @@ async function loadData() {
   });
 
   // ── Render matches ──
-  const played = allMatches.filter(m => m.score?.ft && !m.live);
-  const upcoming = allMatches.filter(m => !m.score?.ft || m.live);
+  const played = allMatches.filter(m => m.score?.ft);
+  const upcoming = allMatches.filter(m => !m.score?.ft);
   const recent3 = played.slice(-5).reverse();
   const next3 = upcoming.slice(0, 5);
 
@@ -608,15 +559,9 @@ async function loadData() {
       ? `<span class="match-type-badge badge-ko">${m.round}</span>`
       : `<span class="match-type-badge badge-group">${m.group || m.round}</span>`;
     const dateStr = m.date ? new Date(m.date).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'}) : '';
-    let scoreHtml;
-    if (m.live) {
-      scoreHtml = `<div class="match-score" style="color:var(--red)">${m.liveScore[0]} – ${m.liveScore[1]}<div style="font-size:0.55rem;letter-spacing:0.08em;color:var(--red);animation:pulse-name 1s ease-in-out infinite">${m.elapsed ? m.elapsed+"'" : 'LIVE'}</div></div>`;
-    } else if (isUpcoming) {
-      const kickoff = m.time ? m.time.slice(0,5) : '';
-      scoreHtml = `<div class="match-score upcoming">${kickoff || 'vs'}</div>`;
-    } else {
-      scoreHtml = `<div class="match-score">${m.score.ft[0]} – ${m.score.ft[1]}</div>`;
-    }
+    const scoreHtml = isUpcoming
+      ? `<div class="match-score upcoming">vs</div>`
+      : `<div class="match-score">${m.score.ft[0]} – ${m.score.ft[1]}</div>`;
     return `
       <div class="match-card">
         <div class="match-meta"><span>${dateStr}</span><span>${typeBadge}</span></div>
@@ -665,7 +610,7 @@ async function loadData() {
   });
 
   document.getElementById("last-updated").textContent =
-    "Live data via API-Football · Updated " + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    "Updated " + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
   document.getElementById("status").style.display = "none";
   document.getElementById("content").style.display = "block";
 }
