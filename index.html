@@ -626,9 +626,12 @@ async function loadData() {
     const worstEntry = worstTeams.find(w => w.team === team);
     const bonusBadge = worstEntry ? `<span class="bonus-badge">⭐ +${worstEntry.bonus % 1 === 0 ? worstEntry.bonus : worstEntry.bonus.toFixed(1)}</span>` : '';
     const owner = TEAM_TO_PLAYER[team] || '—';
+    const isElim = eliminatedTeams.has(team);
+    if (isElim) tr.style.opacity = '0.45';
+    const elimBadge = isElim ? ' <span style="font-size:0.65rem;color:var(--muted)">(out)</span>' : '';
     tr.innerHTML = `
       <td class="pos">${idx+1}</td>
-      <td>${team}${bonusBadge}</td>
+      <td>${team}${elimBadge}${bonusBadge}</td>
       <td style="color:var(--muted);font-size:0.82rem">${owner}</td>
       <td class="r">${ts.gp}</td>
       <td class="r ${gdClass}">${ts.gp > 0 ? gdStr : '—'}</td>
