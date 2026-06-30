@@ -288,7 +288,7 @@
             <th>Owner</th>
             <th class="r">GP</th>
             <th class="r">GD</th>
-            <th style="text-align:center;font-size:0.6rem" title="Points breakdown: count of 3pt results - 2pt results - 1pt results - 0pt results">3-2-1-0</th>
+            <th style="text-align:center;font-size:0.62rem" title="Points earned in each game played, in order — e.g. a team that won 3, drew 1, then won on penalties would show 3-1-2">Game-by-Game</th>
             <th class="r">Pts</th>
           </tr>
         </thead>
@@ -417,7 +417,7 @@ async function loadData() {
   const teamStats = {};
   for (const teams of Object.values(PLAYERS))
     for (const t of teams)
-      teamStats[t] = { pts:0, gf:0, ga:0, gp:0, breakdown: {3:0, 2:0, 1:0, 0:0} };
+      teamStats[t] = { pts:0, gf:0, ga:0, gp:0, ptsList: [] };
 
   for (const m of allMatches) {
     if (!m.score?.ft) continue;
@@ -466,13 +466,13 @@ async function loadData() {
       teamStats[t1].gp++;
       teamStats[t1].gf += g1; teamStats[t1].ga += g2;
       teamStats[t1].pts += pts1;
-      teamStats[t1].breakdown[pts1]++;
+      teamStats[t1].ptsList.push(pts1);
     }
     if (t2 && teamStats[t2]) {
       teamStats[t2].gp++;
       teamStats[t2].gf += g2; teamStats[t2].ga += g1;
       teamStats[t2].pts += pts2;
-      teamStats[t2].breakdown[pts2]++;
+      teamStats[t2].ptsList.push(pts2);
     }
   }
 
@@ -701,9 +701,9 @@ async function loadData() {
     const isElim = eliminatedTeams.has(team);
     if (isElim) tr.style.opacity = '0.45';
     const elimBadge = isElim ? ' <span style="font-size:0.65rem;color:var(--muted)">(out)</span>' : '';
-    const bd = ts.breakdown;
-    const breakdownStr = ts.gp > 0
-      ? `<span style="color:var(--green)">${bd[3]}</span>-<span style="color:var(--gold)">${bd[2]}</span>-<span style="color:var(--muted)">${bd[1]}</span>-<span style="color:var(--red)">${bd[0]}</span>`
+    const colorFor = p => p === 3 ? 'var(--green)' : p === 2 ? 'var(--gold)' : p === 1 ? 'var(--muted)' : 'var(--red)';
+    const breakdownStr = ts.ptsList.length
+      ? ts.ptsList.map(p => `<span style="color:${colorFor(p)}">${p}</span>`).join('-')
       : '—';
     tr.innerHTML = `
       <td class="pos">${idx+1}</td>
