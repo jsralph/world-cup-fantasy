@@ -516,6 +516,37 @@ async function loadData() {
     }
   }
 
+  // ── Group stage eliminations ──
+  // Once all group games are played, any team that didn't make the Round of 32
+  // (top 2 per group + 8 best third-placed) is out — even though they never
+  // technically "lost" a knockout match. We use the Round of 32 fixture list
+  // itself as the source of truth for who advanced, since that's populated
+  // directly by the data feed once groups are finalised.
+  const allGroupTeams = new Set();
+  const groupsComplete = {};
+  for (const m of allMatches) {
+    if (!m.group) continue;
+    allGroupTeams.add(resolveTeam(m.team1));
+    allGroupTeams.add(resolveTeam(m.team2));
+    groupsComplete[m.group] = (groupsComplete[m.group] || 0) + (m.score?.ft ? 1 : 0);
+  }
+
+  const ro32Teams = new Set();
+  for (const m of allMatches) {
+    if (m.round !== 'Round of 32') continue;
+    ro32Teams.add(resolveTeam(m.team1));
+    ro32Teams.add(resolveTeam(m.team2));
+  }
+
+  // Only mark group-stage eliminations once the Round of 32 draw is actually known
+  // (i.e. at least one Round of 32 fixture exists) — otherwise we'd wrongly grey
+  // out everyone before qualification is even decided.
+  if (ro32Teams.size > 0) {
+    for (const team of allGroupTeams) {
+      if (team && !ro32Teams.has(team)) eliminatedTeams.add(team);
+    }
+  }
+
   // ── Render league table ──
   // Header row: Pos | Player | [6 country cols] | Bonus | Total
   const thead = document.getElementById("league-thead");
