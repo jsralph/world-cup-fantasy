@@ -490,12 +490,30 @@ async function loadData() {
   if (leaderEl && standings.length) leaderEl.textContent = standings[0].player;
 
   // ── Knockout eliminations ──
+  // Points/draw status always use 90-min score (ft) only — per scoring rules.
+  // But ELIMINATION must look at the actual match winner: if ft is a draw,
+  // check extra time (et) then penalties (p) to find who actually went out.
   const eliminatedTeams = new Set();
   for (const m of allMatches) {
     if (!isKnockout(m.round) || !m.score?.ft) continue;
     const [g1, g2] = m.score.ft;
-    if (g1 > g2) eliminatedTeams.add(resolveTeam(m.team2));
-    else if (g2 > g1) eliminatedTeams.add(resolveTeam(m.team1));
+
+    if (g1 > g2) { eliminatedTeams.add(resolveTeam(m.team2)); continue; }
+    if (g2 > g1) { eliminatedTeams.add(resolveTeam(m.team1)); continue; }
+
+    // 90 mins was a draw — check extra time score
+    if (m.score.et) {
+      const [e1, e2] = m.score.et;
+      if (e1 > e2) { eliminatedTeams.add(resolveTeam(m.team2)); continue; }
+      if (e2 > e1) { eliminatedTeams.add(resolveTeam(m.team1)); continue; }
+    }
+
+    // Still level — check penalty shootout
+    if (m.score.p) {
+      const [p1, p2] = m.score.p;
+      if (p1 > p2) { eliminatedTeams.add(resolveTeam(m.team2)); continue; }
+      if (p2 > p1) { eliminatedTeams.add(resolveTeam(m.team1)); continue; }
+    }
   }
 
   // ── Render league table ──
