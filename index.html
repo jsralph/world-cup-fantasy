@@ -107,7 +107,7 @@
   }
   .refresh-btn:hover { background: rgba(201,168,76,0.1); }
 
-  .container { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 16px; }
   section { margin-top: 32px; }
 
   .section-label {
@@ -222,7 +222,7 @@
   /* ── Tabs ── */
   .tab-nav {
     display: flex; justify-content: center; gap: 8px;
-    max-width: 1100px; margin: 22px auto 0; padding: 0 16px;
+    max-width: 1400px; margin: 22px auto 0; padding: 0 16px;
   }
   .tab-btn {
     background: var(--pitch-mid); border: 1px solid var(--border);
@@ -254,17 +254,17 @@
     color: var(--muted); letter-spacing: 0.05em; margin-top: 2px; text-transform: uppercase;
   }
   .draft-table td {
-    padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    padding: 2px; border-bottom: 1px solid rgba(255,255,255,0.04);
     vertical-align: middle; text-align: center;
   }
   .draft-round-cell {
     font-family: 'Bebas Neue', sans-serif; color: var(--muted); font-size: 0.9rem;
     width: 38px; background: rgba(255,255,255,0.02);
   }
-  .pick-card { border-radius: 5px; padding: 5px 4px; line-height: 1.25; border: 1px solid transparent; }
+  .pick-card { border-radius: 5px; padding: 3px 2px; line-height: 1.25; border: 1px solid transparent; }
   .pick-num { font-size: 0.56rem; opacity: 0.6; display: block; }
   .pick-name {
-    font-weight: 700; font-size: 0.76rem; display: block;
+    font-weight: 700; font-size: 0.68rem; display: block;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .pick-pos { font-size: 0.56rem; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.8; }
@@ -328,8 +328,8 @@
 </header>
 
 <div class="tab-nav">
-  <button class="tab-btn active" id="btn-league" onclick="showTab('league')">🏆 League</button>
-  <button class="tab-btn" id="btn-draft" onclick="showTab('draft')">🏈 Projected Draft Order</button>
+  <button class="tab-btn active" id="btn-league" onclick="showTab('league')">🏆 Draft Order</button>
+  <button class="tab-btn" id="btn-draft" onclick="showTab('draft')">🏈 Projected Draft</button>
 </div>
 
 <div class="container">
@@ -337,7 +337,7 @@
   <div id="tab-league" style="display:none">
 
     <section>
-      <div class="section-label">🏆 League Table</div>
+      <div class="section-label">🏆 Draft Order Table</div>
       <div style="overflow-x:auto">
         <table class="league-table" id="league-table">
           <thead>
@@ -381,7 +381,7 @@
 
   <div id="tab-draft" style="display:none">
     <section style="margin-top:0">
-      <div class="section-label">🏈 Projected Draft Order</div>
+      <div class="section-label">🏈 Projected Draft</div>
       <div class="pos-legend">
         <span class="pos-QB">QB</span>
         <span class="pos-RB">RB</span>
@@ -558,6 +558,8 @@ function ordinal(n) {
 }
 
 function renderDraftOrder(standings) {
+// TODO: balanced roster allocation implemented in next revision.
+
   const cols = standings.map(s => s.player); // draft column order = current league standings, leader first
   const nTeams = cols.length;
   const rounds = 15;
