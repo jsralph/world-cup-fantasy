@@ -219,6 +219,81 @@
     border-radius: 3px; padding: 1px 5px; margin-left: 6px;
   }
 
+  /* ── Tabs ── */
+  .tab-nav {
+    display: flex; justify-content: center; gap: 8px;
+    max-width: 1100px; margin: 22px auto 0; padding: 0 16px;
+  }
+  .tab-btn {
+    background: var(--pitch-mid); border: 1px solid var(--border);
+    color: var(--muted); padding: 9px 22px; border-radius: 6px 6px 0 0;
+    cursor: pointer; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; letter-spacing: 0.08em; transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--pitch-light); }
+  .tab-btn.active {
+    background: var(--pitch); color: var(--gold);
+    border-color: var(--gold); box-shadow: 0 -2px 12px rgba(201,168,76,0.15);
+  }
+
+  /* ── Furthest-round cell (league + teams tables) ── */
+  .furthest-cell { min-width: 84px; }
+  .furthest-team { font-size: 0.74rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .furthest-round { font-size: 0.62rem; color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ── Draft order tab ── */
+  .draft-table { width: 100%; border-collapse: collapse; }
+  .draft-table th {
+    font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 0.05em;
+    color: var(--gold); padding: 10px 4px; text-align: center;
+    border-bottom: 2px solid var(--gold); background: rgba(201,168,76,0.06);
+    white-space: nowrap;
+  }
+  .draft-th-sub {
+    display: block; font-family: 'Inter', sans-serif; font-size: 0.6rem;
+    color: var(--muted); letter-spacing: 0.05em; margin-top: 2px; text-transform: uppercase;
+  }
+  .draft-table td {
+    padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle; text-align: center;
+  }
+  .draft-round-cell {
+    font-family: 'Bebas Neue', sans-serif; color: var(--muted); font-size: 0.9rem;
+    width: 38px; background: rgba(255,255,255,0.02);
+  }
+  .pick-card { border-radius: 5px; padding: 5px 4px; line-height: 1.25; border: 1px solid transparent; }
+  .pick-num { font-size: 0.56rem; opacity: 0.6; display: block; }
+  .pick-name {
+    font-weight: 700; font-size: 0.76rem; display: block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pick-pos { font-size: 0.56rem; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.8; }
+
+  .pos-QB  { background: rgba(224,80,80,0.16);  border-color: rgba(224,80,80,0.35); }
+  .pos-QB  .pick-name { color: #F08080; }
+  .pos-RB  { background: rgba(78,201,123,0.14); border-color: rgba(78,201,123,0.35); }
+  .pos-RB  .pick-name { color: #6EDB9C; }
+  .pos-WR  { background: rgba(88,196,245,0.14); border-color: rgba(88,196,245,0.35); }
+  .pos-WR  .pick-name { color: #7FCFF7; }
+  .pos-TE  { background: rgba(201,168,76,0.16); border-color: rgba(201,168,76,0.4); }
+  .pos-TE  .pick-name { color: var(--gold); }
+  .pos-K   { background: rgba(180,120,220,0.18); border-color: rgba(180,120,220,0.45); }
+  .pos-K   .pick-name { color: #C7A0E8; }
+  .pos-DST { background: rgba(160,160,160,0.14); border-color: rgba(160,160,160,0.35); }
+  .pos-DST .pick-name { color: #B8BEC4; }
+
+  .pos-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .pos-legend span {
+    font-size: 0.65rem; padding: 3px 9px; border-radius: 4px; border: 1px solid;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .draft-note { font-size: 0.74rem; color: var(--muted); margin-top: 16px; line-height: 1.6; }
+
+  @media (max-width: 700px) {
+    .pick-name { font-size: 0.68rem; }
+    .draft-table th { font-size: 0.8rem; padding: 8px 3px; }
+  }
+
   /* ── Status ── */
   #status { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.9rem; }
   .spinner {
@@ -252,9 +327,14 @@
   </div>
 </header>
 
+<div class="tab-nav">
+  <button class="tab-btn active" id="btn-league" onclick="showTab('league')">🏆 League</button>
+  <button class="tab-btn" id="btn-draft" onclick="showTab('draft')">🏈 Projected Draft Order</button>
+</div>
+
 <div class="container">
   <div id="status"><div class="spinner"></div>Loading match data…</div>
-  <div id="content" style="display:none">
+  <div id="tab-league" style="display:none">
 
     <section>
       <div class="section-label">🏆 League Table</div>
@@ -289,6 +369,7 @@
             <th class="r">GP</th>
             <th class="r">GD</th>
             <th style="text-align:center;font-size:0.62rem" title="Points earned in each game played, in order — e.g. a team that won 3, drew 1, then won on penalties would show 3-1-2">Game-by-Game</th>
+            <th style="text-align:center;font-size:0.62rem">Furthest</th>
             <th class="r">Pts</th>
           </tr>
         </thead>
@@ -297,6 +378,31 @@
     </section>
 
   </div>
+
+  <div id="tab-draft" style="display:none">
+    <section style="margin-top:0">
+      <div class="section-label">🏈 Projected Draft Order</div>
+      <div class="pos-legend">
+        <span class="pos-QB">QB</span>
+        <span class="pos-RB">RB</span>
+        <span class="pos-WR">WR</span>
+        <span class="pos-TE">TE</span>
+        <span class="pos-K">K</span>
+        <span class="pos-DST">DEF</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="draft-table">
+          <thead>
+            <tr id="draft-thead"></tr>
+          </thead>
+          <tbody id="draft-tbody">
+            <tr><td colspan="9" style="padding:30px;color:var(--muted)">Waiting for League Table to load…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
 </div>
 
 <script>
@@ -350,9 +456,156 @@ function isKnockout(round) {
 
 const MEDALS = {0:"🥇", 1:"🥈", 2:"🥉"};
 
+// Furthest-round reached, used as the points tiebreaker.
+// The 3rd-place play-off does NOT count as a round reached — teams there
+// lost in the semi-final, so semi-final is as far as they got.
+const ROUND_LABEL = {0:"Groups", 1:"Round of 32", 2:"Round of 16", 3:"Quarter-Final", 4:"Semi-Final", 5:"Final"};
+function roundRank(round) {
+  if (!round) return 0;
+  const r = round.toLowerCase();
+  if (r.includes('third place') || r.includes('3rd place')) return -1; // excluded — not a round reached
+  if (r.includes('final') && !r.includes('semi') && !r.includes('quarter')) return 5;
+  if (r.includes('semi-final') || r.includes('semi final')) return 4;
+  if (r.includes('quarter-final') || r.includes('quarter final')) return 3;
+  if (r.includes('round of 16')) return 2;
+  if (r.includes('round of 32')) return 1;
+  return 0; // group stage
+}
+
+function showTab(name) {
+  const showLeague = name === 'league';
+  document.getElementById('btn-league').classList.toggle('active', showLeague);
+  document.getElementById('btn-draft').classList.toggle('active', !showLeague);
+  document.getElementById('tab-league').style.display = showLeague ? 'block' : 'none';
+  document.getElementById('tab-draft').style.display = showLeague ? 'none' : 'block';
+}
+
+// ── Projected Draft Order data ──
+// Top-120 overall 2026 season consensus fantasy rankings (FantasyPros-style
+// consensus board; snapshot taken mid-July 2026 — ranks will keep moving
+// through preseason). n = player, pos = position, team = NFL team.
+const DRAFT_BOARD = [
+  {n:"Bijan Robinson", pos:"RB", team:"ATL"}, {n:"Jahmyr Gibbs", pos:"RB", team:"DET"},
+  {n:"Ja'Marr Chase", pos:"WR", team:"CIN"}, {n:"Puka Nacua", pos:"WR", team:"LAR"},
+  {n:"Jonathan Taylor", pos:"RB", team:"IND"}, {n:"Amon-Ra St. Brown", pos:"WR", team:"DET"},
+  {n:"Jaxon Smith-Njigba", pos:"WR", team:"SEA"}, {n:"De'Von Achane", pos:"RB", team:"MIA"},
+  {n:"AJ Brown", pos:"WR", team:"NE"}, {n:"Omarion Hampton", pos:"RB", team:"LAC"},
+  {n:"Justin Jefferson", pos:"WR", team:"MIN"}, {n:"Drake London", pos:"WR", team:"ATL"},
+  {n:"CeeDee Lamb", pos:"WR", team:"DAL"}, {n:"James Cook", pos:"RB", team:"BUF"},
+  {n:"Chase Brown", pos:"RB", team:"CIN"}, {n:"Trey McBride", pos:"TE", team:"ARZ"},
+  {n:"Christian McCaffrey", pos:"RB", team:"SF"}, {n:"Kenneth Walker III", pos:"RB", team:"KC"},
+  {n:"Ashton Jeanty", pos:"RB", team:"LV"}, {n:"Rashee Rice", pos:"WR", team:"KC"},
+  {n:"Saquon Barkley", pos:"RB", team:"PHI"}, {n:"Brock Bowers", pos:"TE", team:"LV"},
+  {n:"George Pickens", pos:"WR", team:"DAL"}, {n:"Derrick Henry", pos:"RB", team:"BAL"},
+  {n:"Jeremiyah Love", pos:"RB", team:"ARZ"}, {n:"DeVonta Smith", pos:"WR", team:"PHI"},
+  {n:"Breece Hall", pos:"RB", team:"NYJ"}, {n:"Josh Allen", pos:"QB", team:"BUF"},
+  {n:"Malik Nabers", pos:"WR", team:"NYG"}, {n:"Nico Collins", pos:"WR", team:"HOU"},
+  {n:"Josh Jacobs", pos:"RB", team:"GB"}, {n:"Chris Olave", pos:"WR", team:"NO"},
+  {n:"Javonte Williams", pos:"RB", team:"DAL"}, {n:"Kyren Williams", pos:"RB", team:"LAR"},
+  {n:"Tetairoa McMillan", pos:"WR", team:"CAR"}, {n:"Zay Flowers", pos:"WR", team:"BAL"},
+  {n:"Travis Etienne", pos:"RB", team:"NO"}, {n:"Tee Higgins", pos:"WR", team:"CIN"},
+  {n:"Garrett Wilson", pos:"WR", team:"NYJ"}, {n:"Quinshon Judkins", pos:"RB", team:"CLE"},
+  {n:"David Montgomery", pos:"RB", team:"HOU"}, {n:"Emeka Egbuka", pos:"WR", team:"TB"},
+  {n:"Tyler Warren", pos:"TE", team:"IND"}, {n:"Jaylen Waddle", pos:"WR", team:"DEN"},
+  {n:"Ladd McConkey", pos:"WR", team:"LAC"}, {n:"Cam Skattebo", pos:"RB", team:"NYG"},
+  {n:"TreVeyon Henderson", pos:"RB", team:"NE"}, {n:"Davante Adams", pos:"WR", team:"LAR"},
+  {n:"Christian Watson", pos:"WR", team:"GB"}, {n:"D'Andre Swift", pos:"RB", team:"CHI"},
+  {n:"Bucky Irving", pos:"RB", team:"TB"}, {n:"Luther Burden", pos:"WR", team:"CHI"},
+  {n:"Terry McLaurin", pos:"WR", team:"WAS"}, {n:"DJ Moore", pos:"WR", team:"BUF"},
+  {n:"Mike Evans", pos:"WR", team:"SF"}, {n:"Drake Maye", pos:"QB", team:"NE"},
+  {n:"Jameson Williams", pos:"WR", team:"DET"}, {n:"Lamar Jackson", pos:"QB", team:"BAL"},
+  {n:"Joe Burrow", pos:"QB", team:"CIN"}, {n:"Colston Loveland", pos:"TE", team:"CHI"},
+  {n:"Rome Odunze", pos:"WR", team:"CHI"}, {n:"Jadarian Price", pos:"RB", team:"SEA"},
+  {n:"Bhayshul Tuten", pos:"RB", team:"JAX"}, {n:"Chuba Hubbard", pos:"RB", team:"CAR"},
+  {n:"Jayden Daniels", pos:"QB", team:"WAS"}, {n:"Carnell Tate", pos:"WR", team:"TEN"},
+  {n:"Marvin Harrison Jr", pos:"WR", team:"ARZ"}, {n:"Jordyn Tyson", pos:"WR", team:"NO"},
+  {n:"Caleb Williams", pos:"QB", team:"CHI"}, {n:"Courtland Sutton", pos:"WR", team:"DEN"},
+  {n:"Tucker Kraft", pos:"TE", team:"GB"}, {n:"Harold Fannin Jr", pos:"TE", team:"CLE"},
+  {n:"Alec Pierce", pos:"WR", team:"IND"}, {n:"DK Metcalf", pos:"WR", team:"PIT"},
+  {n:"Jaylen Warren", pos:"RB", team:"PIT"}, {n:"Parker Washington", pos:"WR", team:"JAX"},
+  {n:"Trevor Lawrence", pos:"QB", team:"JAX"}, {n:"Brian Thomas Jr", pos:"WR", team:"JAX"},
+  {n:"Kyle Monangai", pos:"RB", team:"CHI"}, {n:"Jayden Reed", pos:"WR", team:"GB"},
+  {n:"Rhamondre Stevenson", pos:"RB", team:"NE"}, {n:"Jalen Hurts", pos:"QB", team:"PHI"},
+  {n:"Tony Pollard", pos:"RB", team:"TEN"}, {n:"Sam LaPorta", pos:"TE", team:"DET"},
+  {n:"Michael Wilson", pos:"WR", team:"ARZ"}, {n:"Quentin Johnston", pos:"WR", team:"LAC"},
+  {n:"Chris Godwin", pos:"WR", team:"TB"}, {n:"Dak Prescott", pos:"QB", team:"DAL"},
+  {n:"Jaxson Dart", pos:"QB", team:"NYG"}, {n:"Ricky Pearsall", pos:"WR", team:"SF"},
+  {n:"Michael Pittman Jr", pos:"WR", team:"PIT"}, {n:"Kyle Pitts Sr", pos:"TE", team:"ATL"},
+  {n:"Makai Lemon", pos:"WR", team:"PHI"}, {n:"Brock Purdy", pos:"QB", team:"SF"},
+  {n:"Rico Dowdle", pos:"RB", team:"PIT"}, {n:"Blake Corum", pos:"RB", team:"LAR"},
+  {n:"RJ Harvey", pos:"RB", team:"DEN"}, {n:"Jakobi Meyers", pos:"WR", team:"JAX"},
+  {n:"Matthew Stafford", pos:"QB", team:"LAR"}, {n:"JK Dobbins", pos:"RB", team:"DEN"},
+  {n:"Kenneth Gainwell", pos:"RB", team:"TB"}, {n:"Patrick Mahomes", pos:"QB", team:"KC"},
+  {n:"Josh Downs", pos:"WR", team:"IND"}, {n:"Wan'Dale Robinson", pos:"WR", team:"TEN"},
+  {n:"Justin Herbert", pos:"QB", team:"LAC"}, {n:"Jared Goff", pos:"QB", team:"DET"},
+  {n:"Bo Nix", pos:"QB", team:"DEN"}, {n:"Jordan Addison", pos:"WR", team:"MIN"},
+  {n:"Chris Rodriguez Jr", pos:"RB", team:"JAX"}, {n:"Jacory Croskey-Merritt", pos:"RB", team:"WAS"},
+  {n:"Jonathon Brooks", pos:"RB", team:"CAR"}, {n:"Tyler Shough", pos:"QB", team:"NO"},
+  {n:"Jordan Love", pos:"QB", team:"GB"}, {n:"KC Concepcion", pos:"WR", team:"CLE"},
+  {n:"Xavier Worthy", pos:"WR", team:"KC"}, {n:"Oronde Gadsden", pos:"TE", team:"LAC"},
+  {n:"Jayden Higgins", pos:"WR", team:"HOU"}, {n:"Kyler Murray", pos:"QB", team:"MIN"},
+  {n:"Khalil Shakir", pos:"WR", team:"BUF"}, {n:"Romeo Doubs", pos:"WR", team:"NE"}
+];
+
+// Packer always reaches for a kicker way earlier than he should —
+// his round 4 pick is overridden to this guy regardless of what the board says.
+const PACKER_OVERRIDE = { n: "Brandon Aubrey", pos: "K", team: "DAL" };
+const PACKER_OVERRIDE_ROUND = 4; // 1-indexed
+
+function ordinal(n) {
+  const s = ["th","st","nd","rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function renderDraftOrder(standings) {
+  const cols = standings.map(s => s.player); // draft column order = current league standings, leader first
+  const nTeams = cols.length;
+  const rounds = 15;
+
+  // Build the snake sequence: grid[round][colIndex] = overall pick number
+  const grid = [];
+  let overall = 0;
+  for (let r = 0; r < rounds; r++) {
+    const order = (r % 2 === 0) ? cols.map((_, i) => i) : cols.map((_, i) => i).reverse();
+    const row = new Array(nTeams);
+    for (const colIdx of order) { overall++; row[colIdx] = overall; }
+    grid.push(row);
+  }
+
+  const packerCol = cols.indexOf('Packer');
+  const overridePick = (packerCol !== -1) ? grid[PACKER_OVERRIDE_ROUND - 1][packerCol] : null;
+
+  const thead = document.getElementById('draft-thead');
+  thead.innerHTML = `<th style="width:36px">Rd</th>` + cols.map((p, i) =>
+    `<th>${p}<span class="draft-th-sub">${ordinal(i + 1)} overall</span></th>`
+  ).join('');
+
+  const tbody = document.getElementById('draft-tbody');
+  tbody.innerHTML = '';
+  for (let r = 0; r < rounds; r++) {
+    const tr = document.createElement('tr');
+    let cells = `<td class="draft-round-cell">${r + 1}</td>`;
+    for (let c = 0; c < nTeams; c++) {
+      const pickNum = grid[r][c];
+      const player = (pickNum === overridePick) ? PACKER_OVERRIDE : DRAFT_BOARD[pickNum - 1];
+      if (!player) { cells += `<td>—</td>`; continue; }
+      cells += `
+        <td>
+          <div class="pick-card pos-${player.pos}">
+            <span class="pick-num">#${pickNum}</span>
+            <span class="pick-name">${player.n}</span>
+            <span class="pick-pos">${player.pos} · ${player.team}</span>
+          </div>
+        </td>`;
+    }
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  }
+}
+
 async function loadData() {
   document.getElementById("status").style.display = "block";
-  document.getElementById("content").style.display = "none";
+  document.getElementById("tab-league").style.display = "none";
   document.getElementById("status").innerHTML = '<div class="spinner"></div>Loading match data…';
 
   const MAIN_URL = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
@@ -522,9 +775,33 @@ async function loadData() {
     playerStats[player] = { pts, gf, ga, gd: gf-ga, bonus, total: pts + bonus };
   }
 
+  // ── Furthest round reached, per team ──
+  // Look at every match (played or scheduled) a team appears in, excluding the
+  // 3rd-place play-off, and take the most advanced round. Reaching a round
+  // (even before it's played) counts, since qualifying for it is "getting there".
+  const furthest = {};
+  for (const teams of Object.values(PLAYERS)) for (const t of teams) furthest[t] = 0;
+  for (const m of allMatches) {
+    const rank = roundRank(m.round);
+    if (rank < 0) continue; // 3rd place play-off doesn't count
+    const t1 = resolveTeam(m.team1), t2 = resolveTeam(m.team2);
+    if (t1 && rank > furthest[t1]) furthest[t1] = rank;
+    if (t2 && rank > furthest[t2]) furthest[t2] = rank;
+  }
+
+  // Best (furthest-progressing) team per player — used both as the tiebreaker
+  // and for the "Furthest" column display.
+  const playerFurthest = {};
+  for (const [player, teams] of Object.entries(PLAYERS)) {
+    const bestTeam = teams.reduce((a, b) => furthest[b] > furthest[a] ? b : a);
+    playerFurthest[player] = { team: bestTeam, rank: furthest[bestTeam] };
+  }
+
   const standings = Object.entries(playerStats)
     .map(([player, s]) => ({ player, ...s }))
-    .sort((a,b) => b.total !== a.total ? b.total - a.total : b.pts !== a.pts ? b.pts - a.pts : b.gd - a.gd);
+    .sort((a,b) => b.total !== a.total ? b.total - a.total
+      : playerFurthest[b.player].rank !== playerFurthest[a.player].rank ? playerFurthest[b.player].rank - playerFurthest[a.player].rank
+      : b.pts !== a.pts ? b.pts - a.pts : b.gd - a.gd);
 
   // ── Update header leader ──
   const leaderEl = document.getElementById('leader-name');
@@ -595,6 +872,7 @@ async function loadData() {
     <th class="left" style="width:28px"></th>
     <th class="left">Player</th>
     <th colspan="6" style="text-align:center;color:var(--gold-dim);border-bottom:1px solid var(--border)">Points per Country</th>
+    <th title="Furthest-progressing team — the tiebreaker used to split players level on points">Furthest</th>
     <th>Bonus</th>
     <th>Total</th>
   `;
@@ -632,10 +910,18 @@ async function loadData() {
       ? `<span style="color:var(--green);font-weight:700">+${row.bonus % 1 === 0 ? row.bonus : row.bonus.toFixed(1)}</span>`
       : `<span style="color:var(--muted)">—</span>`;
 
+    const bestTeam = playerFurthest[row.player];
+    const furthestCell = `
+      <td class="furthest-cell">
+        <div class="furthest-team">${bestTeam.team}</div>
+        <div class="furthest-round">${ROUND_LABEL[bestTeam.rank]}</div>
+      </td>`;
+
     tr.innerHTML = `
       ${posCell}
       <td class="left"><span class="player-name${i === 0 ? ' leader' : ''}">${row.player}</span></td>
       ${countryCells}
+      ${furthestCell}
       <td>${bonusDisplay}</td>
       <td class="total-col">${row.total % 1 === 0 ? row.total : row.total.toFixed(1)}</td>
     `;
@@ -712,15 +998,19 @@ async function loadData() {
       <td class="r">${ts.gp}</td>
       <td class="r ${gdClass}">${ts.gp > 0 ? gdStr : '—'}</td>
       <td style="text-align:center;font-size:0.78rem;font-variant-numeric:tabular-nums">${breakdownStr}</td>
+      <td style="text-align:center;font-size:0.78rem;color:var(--muted)">${ROUND_LABEL[furthest[team]]}</td>
       <td class="r" style="font-weight:700">${ts.pts}</td>
     `;
     teamsTbody.appendChild(tr);
   });
 
+  // ── Render Projected Draft Order tab ──
+  renderDraftOrder(standings);
+
   document.getElementById("last-updated").textContent =
     "Updated " + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
   document.getElementById("status").style.display = "none";
-  document.getElementById("content").style.display = "block";
+  document.getElementById("tab-league").style.display = "block";
 }
 
 loadData();
